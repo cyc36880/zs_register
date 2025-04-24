@@ -37,10 +37,8 @@ zs_reg_t *zs_register_reg_init(zs_reg_t *reg, char *name, uint32_t addr);
 int zs_register_registered_reg(zs_register_t *register_handle, char *name, uint32_t addr);
 int zs_register_registered_reg_data(zs_register_t *register_handle, char *name, uint32_t offset_addr, uint32_t data_len);
 
-zs_reg_t *zs_register_reg_get_for_name(zs_register_t *register_handle, char *name);
-zs_reg_data_t *zs_register_reg_data_get_for_addr(zs_register_t *register_handle, uint32_t addr);
-zs_reg_data_t *zs_register_reg_data_get_for_offset_addr(zs_reg_data_t *reg, uint32_t offset_addr);
-int zs_register_reg_data_set_data(zs_reg_data_t *reg_data, uint32_t offset_addr, void *data, uint32_t data_len);
-int zs_register_reg_data_get_data(zs_reg_data_t *reg_data, uint32_t offset_addr, void *data, uint32_t data_len);
+int zs_register_reg_data_get_data_nums_for_addr(zs_register_t *register_handle, uint32_t addr, uint32_t *data_nums);
+int zs_register_reg_data_set_for_addr(zs_register_t *register_handle, uint32_t addr, void *data, uint32_t data_len);
+int zs_register_reg_data_get_data_for_addr(zs_register_t *register_handle, uint32_t addr, void *data);
 
 #endif /* __ZS_REGISTER_H__ */
