@@ -4,7 +4,7 @@
 
 #define ZS_REGISTER_MEM_CUSTOM 0
 #if ZS_REGISTER_MEM_CUSTOM==0
-    #define ZS_REGISTER_MEM_INCLUDE "stdio.h"
+    #define ZS_REGISTER_MEM_INCLUDE "stdlib.h"
     #define ZS_REGISTER_MEM_ALLOC   malloc
     #define ZS_REGISTER_MEM_FREE    free
 #else
