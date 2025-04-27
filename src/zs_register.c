@@ -2,9 +2,8 @@
 #include ZS_REGISTER_MEM_INCLUDE
 #include <string.h>
 
-static zs_reg_data_t *zs_register_reg_data_get_for_offset_addr(zs_reg_t *reg, uint32_t offset_addr);
-static zs_reg_t *zs_register_reg_get_for_name(zs_register_t *register_handle, char *name);
-static zs_reg_data_t *zs_register_reg_data_get_for_addr(zs_register_t *register_handle, uint32_t addr);
+#include "stdio.h"
+
 
 zs_reg_data_t *zs_register_reg_data_init(zs_reg_data_t *reg_data, uint32_t offset_addr)
 {
@@ -17,7 +16,6 @@ zs_reg_data_t *zs_register_reg_data_init(zs_reg_data_t *reg_data, uint32_t offse
 zs_reg_t *zs_register_reg_init(zs_reg_t *reg, char *name, uint32_t addr)
 {
     if (NULL == reg) return NULL;
-    memset(reg, 0, sizeof(zs_reg_t));
     memcpy(reg->name, name, strlen(name) + 1);
     reg->addr = addr;
     return reg;
@@ -30,8 +28,14 @@ int zs_register_registered_reg(zs_register_t *register_handle, char *name, uint3
 {
     if (NULL == register_handle) return -1;
     zs_reg_t *reg = ZS_REGISTER_MEM_ALLOC(sizeof(zs_reg_t));
+    if (NULL == reg) goto error_reg_data_alloc;
+    memset(reg, 0, sizeof(zs_reg_t));
+
+    reg->name = ZS_REGISTER_MEM_ALLOC(strlen(name) + 1);
+    if (NULL == reg->name) goto error_reg_alloc;
+
     reg = zs_register_reg_init(reg, name, addr);
-    if (NULL == reg) return -1;
+    if (NULL == reg) goto error_init_reg;
 
     if (NULL == register_handle->reg_list) 
     {
@@ -47,6 +51,15 @@ int zs_register_registered_reg(zs_register_t *register_handle, char *name, uint3
         tmp->next = reg;
     }
     return 0;
+
+error_init_reg:
+
+error_reg_alloc:
+    ZS_REGISTER_MEM_FREE(reg->name);
+error_reg_data_alloc:
+    ZS_REGISTER_MEM_FREE(reg->reg_data_list);
+
+    return -1;
 }
 
 
@@ -58,6 +71,8 @@ int zs_register_registered_reg_data(zs_register_t *register_handle, char *name, 
     if (NULL == reg_data) goto error_reg_alloc;
     reg_data->data = ZS_REGISTER_MEM_ALLOC(sizeof(ZS_REGISTER_DATA_TYPE) * data_len);
     if (NULL == reg_data->data) goto error_reg_data_alloc;
+    memset(reg_data->data, 0, sizeof(ZS_REGISTER_DATA_TYPE) * data_len);
+    reg_data->next = NULL;
 
     reg_data->capacity = data_len; // initial 
     reg_data->offset_addr = offset_addr;
@@ -78,7 +93,6 @@ int zs_register_registered_reg_data(zs_register_t *register_handle, char *name, 
         }
         tmp->next = reg_data;
     }
-
     return 0;
 
 error_not_found:
@@ -91,7 +105,7 @@ error_reg_alloc:
     return -1;
 }
 
-int zs_register_reg_data_set_for_addr(zs_register_t *register_handle, uint32_t addr, void *data, uint32_t data_len)
+int zs_register_reg_data_set_data_for_addr(zs_register_t *register_handle, uint32_t addr, void *data, uint32_t data_len)
 {
     if (NULL == register_handle) return -1;
     zs_reg_data_t *reg_data = zs_register_reg_data_get_for_addr(register_handle, addr);
@@ -101,6 +115,16 @@ int zs_register_reg_data_set_for_addr(zs_register_t *register_handle, uint32_t a
     memcpy(reg_data->data, data, data_len);
     reg_data->nums = data_len; // update nums
 
+    return 0;
+}
+
+int zs_register_reg_data_get_capacity_for_addr(zs_register_t *register_handle, uint32_t addr, uint32_t *capacity)
+{
+    if (NULL == register_handle) return -1;
+    zs_reg_data_t *reg_data = zs_register_reg_data_get_for_addr(register_handle, addr);
+    if (NULL == reg_data) return -1;
+
+    *capacity = reg_data->capacity; // update capacity
     return 0;
 }
 
@@ -125,10 +149,30 @@ int zs_register_reg_data_get_data_for_addr(zs_register_t *register_handle, uint3
     return 0;
 }
 
+int zs_register_reg_data_set_data_byte_for_addr(zs_register_t *register_handle, uint32_t addr, uint8_t index, uint8_t data)
+{
+    if (NULL == register_handle) return -1;
+    zs_reg_data_t *reg_data = zs_register_reg_data_get_for_addr(register_handle, addr);
+    if (NULL == reg_data) return -1;
+
+    if (index >= reg_data->capacity) return -1;
+    reg_data->data[index] = data; // update data
+    return 0;
+}
+
+int zs_register_reg_data_get_data_byte_for_addr(zs_register_t *register_handle, uint32_t addr, uint8_t index)
+{
+    if (NULL == register_handle) return -1;
+    zs_reg_data_t *reg_data = zs_register_reg_data_get_for_addr(register_handle, addr);
+    if (NULL == reg_data) return -1;
+
+    if (index >= reg_data->capacity) return -1;
+    return reg_data->data[index]; // update data
+}
 
 // ============================
 
-static zs_reg_t *zs_register_reg_get_for_name(zs_register_t *register_handle, char *name)
+zs_reg_t *zs_register_reg_get_for_name(zs_register_t *register_handle, char *name)
 {
     if (NULL == register_handle) return NULL;
     zs_reg_t *reg = register_handle->reg_list;
@@ -144,7 +188,7 @@ static zs_reg_t *zs_register_reg_get_for_name(zs_register_t *register_handle, ch
 }
 
 
-static zs_reg_data_t *zs_register_reg_data_get_for_offset_addr(zs_reg_t *reg, uint32_t offset_addr)
+zs_reg_data_t *zs_register_reg_data_get_for_offset_addr(zs_reg_t *reg, uint32_t offset_addr)
 {
     if (NULL == reg) return NULL;
     zs_reg_data_t *reg_data = reg->reg_data_list;
@@ -158,7 +202,7 @@ static zs_reg_data_t *zs_register_reg_data_get_for_offset_addr(zs_reg_t *reg, ui
     return NULL;
 }
 
-static zs_reg_data_t *zs_register_reg_data_get_for_addr(zs_register_t *register_handle, uint32_t addr)
+zs_reg_data_t *zs_register_reg_data_get_for_addr(zs_register_t *register_handle, uint32_t addr)
 {
     if (NULL == register_handle) return NULL;
     zs_reg_t *reg = register_handle->reg_list;
